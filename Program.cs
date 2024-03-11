@@ -1,6 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Proyecto1
 {
@@ -33,10 +32,11 @@ namespace Proyecto1
             MostarBordes();
             while (true)
             {
+                //Pone automaticamente un '0'. NOTA: No lo cuenta como ingresado y por eso lo pone como gris
                 if (numeroTemporal == "")
                 {
                     BorrarNumeros(coordNumY);
-                    DibujarNumeros("0", coordNumX, coordNumY);
+                    DibujarNumeros("0", ConsoleColor.DarkGray, coordNumX, coordNumY);
                 }
                 //Registra la tecla pulsada
                 teclaPulsada = Console.ReadKey(true);
@@ -71,7 +71,7 @@ namespace Proyecto1
                     {
                         //Si se trata solo de un numero negativo (Falsa alarma, fak)
                         if ((numeroTemporal != "" && numeroTemporal[0] != '-' && !char.IsNumber(numeroTemporal[0]) ||
-                                numeroTemporal == "") && operadorAnterior != '+')
+                                numeroTemporal == "") && operadorAnterior != '+' && operadorAnterior != '-')
                         {
                             numeroTemporal += teclaPulsada.KeyChar;
                             DarFormatoAlNumero(ref numeroTemporal, "Numero");
@@ -84,6 +84,13 @@ namespace Proyecto1
                         else if (teclaPulsada.KeyChar == '-' && operadorAnterior == '+')
                         {
                             operadorAnterior = '-';
+                            historialDeOperaciones = $"{num1} {operadorAnterior}";
+                            BorrarHistorial(coordOpY);
+                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
+                        }
+                        else if (teclaPulsada.KeyChar == '-' && operadorAnterior == '-')
+                        {
+                            operadorAnterior = '+';
                             historialDeOperaciones = $"{num1} {operadorAnterior}";
                             BorrarHistorial(coordOpY);
                             DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
@@ -142,6 +149,7 @@ namespace Proyecto1
                      * en ocaciones tambien resuelve traka*/
                     else
                     {
+                        //Evita operadores al inicio y operadores duplicados (la neta no me acuerdo, pero según yo es eso)
                         if (numeroTemporal != "" && numeroTemporal.Length == 1 && numeroTemporal[0] == '-') continue;
                         operadorActual = teclaPulsada.KeyChar;
                         //Si el usuario anteriormente habia tecleado un numero, este se almacena ya sea en n1 o n2.
@@ -162,18 +170,39 @@ namespace Proyecto1
                         //Realiza la operación automaticamente al tener n1, un numero ingresado y anteriormente un operador
                         if (num1 != "" && num2 != "" && numeroTemporal != "")
                         {
-                            res = RealizarOperacion(n1, n2, operadorAnterior);
-                            resultado = res.ToString();
-                            num1 = resultado;
-                            n1 = Convert.ToDouble(num1);
-                            DarFormatoAlNumero(ref resultado, "Resultado");
-                            historialDeOperaciones = $"{resultado} {operadorActual}";
-                            BorrarHistorial(coordOpY);
-                            BorrarNumeros(coordNumY);
-                            DibujarNumeros(resultado, coordNumX, coordNumY);
-                            num2 = "";
-                            n2 = 0;
-                            operadorAnterior = teclaPulsada.KeyChar;
+                            if (numeroTemporal == "0" && operadorAnterior == '/')
+                            {
+                                historialDeOperaciones = $"{num1} {operadorAnterior} {0} =";
+                                BorrarHistorial(coordOpY);
+                                BorrarNumeros(coordNumY);
+                                DibujarNumeros("ERROR", coordNumX, coordNumY);
+                                num1 = "";
+                                n1 = 0;
+                                num2 = "";
+                                n2 = 0;
+                                operadorAnterior = teclaPulsada.KeyChar;
+                                Thread.Sleep(500);
+                                numeroTemporal = "";
+                                historialDeOperaciones = "";
+                                operadorAnterior = '\0';
+                                Console.Clear();
+                                MostarBordes();
+                            }
+                            else
+                            {
+                                res = RealizarOperacion(n1, n2, operadorAnterior);
+                                resultado = res.ToString();
+                                num1 = resultado;
+                                n1 = Convert.ToDouble(num1);
+                                DarFormatoAlNumero(ref resultado, "Resultado");
+                                historialDeOperaciones = $"{resultado} {operadorActual}";
+                                BorrarHistorial(coordOpY);
+                                BorrarNumeros(coordNumY);
+                                DibujarNumeros(resultado, coordNumX, coordNumY);
+                                num2 = "";
+                                n2 = 0;
+                                operadorAnterior = teclaPulsada.KeyChar;
+                            }
                         }
                         BorrarHistorial(coordOpY);
                         DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
@@ -185,23 +214,45 @@ namespace Proyecto1
                 {
                     if (num1 != "" && numeroTemporal != "")
                     {
-                        num2 = numeroTemporal;
-                        n2 = Convert.ToDouble(num2);
-                        DarFormatoAlNumero(ref num2, "Numero");
-                        res = RealizarOperacion(n1, n2, operadorAnterior);
-                        resultado = res.ToString();
-                        historialDeOperaciones = $"{num1} {operadorAnterior} {num2} =";
-                        DarFormatoAlNumero(ref resultado, "Resultado");
-                        BorrarHistorial(coordOpY);
-                        BorrarNumeros(coordNumY);
-                        DibujarNumeros(resultado, coordNumX, coordNumY);
-                        num2 = "";
-                        n2 = 0;
-                        operadorAnterior = teclaPulsada.KeyChar;
-                        DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                        numeroTemporal = res.ToString();
-                        num1 = "";
-                        n1 = 0;
+                        if (numeroTemporal == "0" && operadorAnterior == '/')
+                        {
+                            historialDeOperaciones = $"{num1} {operadorAnterior} {0} =";
+                            BorrarHistorial(coordOpY);
+                            BorrarNumeros(coordNumY);
+                            DibujarNumeros("ERROR", coordNumX, coordNumY);
+                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
+                            num1 = "";
+                            n1 = 0;
+                            num2 = "";
+                            n2 = 0;
+                            operadorAnterior = teclaPulsada.KeyChar;
+                            Thread.Sleep(500);
+                            numeroTemporal = "";
+                            historialDeOperaciones = "";
+                            operadorAnterior = '\0';
+                            Console.Clear();
+                            MostarBordes();
+                        }
+                        else
+                        {
+                            num2 = numeroTemporal;
+                            n2 = Convert.ToDouble(num2);
+                            DarFormatoAlNumero(ref num2, "Numero");
+                            res = RealizarOperacion(n1, n2, operadorAnterior);
+                            resultado = res.ToString();
+                            historialDeOperaciones = $"{num1} {operadorAnterior} {num2} =";
+                            DarFormatoAlNumero(ref resultado, "Resultado");
+                            BorrarHistorial(coordOpY);
+                            BorrarNumeros(coordNumY);
+                            DibujarNumeros(resultado, coordNumX, coordNumY);
+                            num2 = "";
+                            n2 = 0;
+                            operadorAnterior = teclaPulsada.KeyChar;
+                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
+                            numeroTemporal = res.ToString();
+                            num1 = "";
+                            n1 = 0;
+                        }
                     }
                 }
                 //Detecta si quiere borrar un numero
@@ -486,14 +537,32 @@ namespace Proyecto1
                         };
                     numero = mas;
                     break;
+                case 'R':
+                    char[,] R = {
+                            {'█', '█', '█'},
+                            {'█', ' ', '█'},
+                            {'█', '█', ' '},
+                            {'█', ' ', '█'},
+                            {'█', ' ', '█'}
+                        };
+                    numero = R;
+                    break;
+                case 'O':
+                    char[,] O = {
+                            {'█', '█', '█'},
+                            {'█', ' ', '█'},
+                            {'█', ' ', '█'},
+                            {'█', ' ', '█'},
+                            {'█', '█', '█'}
+                        };
+                    numero = O;
+                    break;
             }
             return numero;
         }
         public static void DibujarCaracter(char n, int x, int y)
         {
             char[,] caracter = ObtenerMatrizDelNumero(n);
-            if (n == 'E') Console.ForegroundColor = ConsoleColor.Red;
-            if (n == '+') Console.ForegroundColor = ConsoleColor.Green;
             int xCopia = x;
             for (int i = 0; i < caracter.GetLength(0); i++)
             {
@@ -506,7 +575,6 @@ namespace Proyecto1
                 y++;
                 x = xCopia;
             }
-            if (n == 'E' || n == '+') Console.ResetColor();
         }
         public static void DibujarNumeros(string numeros, int x, int y)
         {
@@ -514,11 +582,7 @@ namespace Proyecto1
             //Establece la coordenada x según la longitud del numero
             foreach (char cosa in numeros)
             {
-                if (int.TryParse(cosa.ToString(), out int num) || cosa == '-' || cosa == 'E' || cosa == '+')
-                {
-                    x -= 4;
-                }
-                else if (cosa == '.')
+                if (cosa == '.')
                 {
                     x -= 2;
                 }
@@ -526,12 +590,60 @@ namespace Proyecto1
                 {
                     x -= 3;
                 }
+                else
+                {
+                    x -= 4;
+                }
             }
             //Recorre todos los numeros
             foreach (char n in numeros)
             {
                 //Dibujar el numero actual
+                if (n == 'E' || n == 'R' || n == 'O') Console.ForegroundColor = ConsoleColor.Red;
                 DibujarCaracter(n, x, y);
+                if (n == 'E' || n == 'R' || n == 'O') Console.ResetColor();
+                //Deja espacio entre cada numero, punto o coma
+                if (n == '.')
+                {
+                    x += 2;
+                }
+                else if (n == ',')
+                {
+                    x += 3;
+                }
+                else
+                {
+                    x += 4;
+                }
+            }
+            Console.ResetColor();
+        }
+        public static void DibujarNumeros(string numeros, ConsoleColor color, int x, int y)
+        {
+            Console.ForegroundColor = color;
+            //Establece la coordenada x según la longitud del numero
+            foreach (char cosa in numeros)
+            {
+                if (cosa == '.')
+                {
+                    x -= 2;
+                }
+                else if (cosa == ',')
+                {
+                    x -= 3;
+                }
+                else
+                {
+                    x -= 4;
+                }
+            }
+            //Recorre todos los numeros
+            foreach (char n in numeros)
+            {
+                //Dibujar el numero actual
+                if (n == 'E' || n == 'R' || n == 'O') Console.ForegroundColor = ConsoleColor.Red;
+                DibujarCaracter(n, x, y);
+                if (n == 'E' || n == 'R' || n == 'O') Console.ResetColor();
                 //Deja espacio entre cada numero, punto o coma
                 if (n == '.')
                 {
