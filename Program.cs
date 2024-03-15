@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Proyecto1
+namespace Calculadora
 {
     internal class Program
     {
@@ -14,191 +14,103 @@ namespace Proyecto1
 
             /* VARIABLES NECESARIAS: */
             ConsoleKeyInfo teclaPulsada;
-            string numeroTemporal = "";
+            string numeroTemporal = "0";
             string historialDeOperaciones = "";
-            char operadorActual;
             char operadorAnterior = '\0';
             string num1 = "", num2 = "", resultado = "";
             double n1 = 0, n2 = 0, res = 0;
-
+            bool operacionTermianda = false;
             //Coordenadas de los numeros grandes:
             int coordNumX = Console.WindowWidth - 5;
             int coordNumY = 4;
             //Coordenadas de las operaciones:
             int coordOpX = Console.WindowWidth - 5;
             int coordOpY = 2;
-
-            /* LOGICA PRINCIPAL*/
+            //Nueva logica
             MostarBordes();
+            DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
             while (true)
             {
-                //Pone automaticamente un '0'. NOTA: No lo cuenta como ingresado y por eso lo pone como gris
-                if (numeroTemporal == "")
-                {
-                    BorrarNumeros(coordNumY);
-                    DibujarNumeros("0", ConsoleColor.DarkGray, coordNumX, coordNumY);
-                }
-                //Registra la tecla pulsada
+                //Registrar la tecla pulsada
                 teclaPulsada = Console.ReadKey(true);
-                //Detecta si es un numero del 0-9 o si es es un '.'
+                //Valida que es un numero del 0-9 o un punto
                 if (Char.IsNumber(teclaPulsada.KeyChar) || teclaPulsada.KeyChar == '.')
                 {
-                    //Comprueba que no existan varios puntos decimales en el numero
-                    if (!(numeroTemporal.Contains(".") && teclaPulsada.KeyChar == '.'))
+                    //Solo permite un punto decimal
+                    if (numeroTemporal.Contains(".") && teclaPulsada.KeyChar == '.') continue;
+                    //Evita que el numero sea demaciado largo y se salga de la pantalla
+                    if (((numeroTemporal.Replace(",", "").Length > 14 && !numeroTemporal.Contains("-") ||
+                        numeroTemporal.Replace(",", "").Length > 15 && numeroTemporal.Contains("-"))) &&
+                        teclaPulsada.KeyChar != '.' && !numeroTemporal.Contains("."))
                     {
-                        //Evita que el numero sea demaciado largo y se salga de la pantalla
-                        if (((numeroTemporal.Replace(",", "").Length > 14 && !numeroTemporal.Contains("-") ||
-                            numeroTemporal.Replace(",", "").Length > 15 && numeroTemporal.Contains("-"))) &&
-                            teclaPulsada.KeyChar != '.' && !numeroTemporal.Contains("."))
-                        {
-                            continue;
-                        }
-                        //Agrega el el nuevo numero tecleado al almacenador
-                        numeroTemporal += teclaPulsada.KeyChar;
-                        //Le da un formato linde
-                        DarFormatoAlNumero(ref numeroTemporal, "Numero");
-                        //Lo muestra
+                        continue;
+                    }
+                    if (operacionTermianda)
+                    {
+                        ReiniciarTodo(ref numeroTemporal, ref num1, ref num2, ref n1, ref n2, ref operadorAnterior,
+                                    ref historialDeOperaciones, ref operacionTermianda, coordOpY, coordNumX, coordNumY);
+                        operacionTermianda = false;
+                    }
+                    //Agrega el el nuevo numero tecleado al almacenador
+                    numeroTemporal += teclaPulsada.KeyChar;
+                    //Le da un formato linde
+                    DarFormatoAlNumero(ref numeroTemporal, "Numero");
+                    //Lo muestra
+                    BorrarNumeros(coordNumY);
+                    DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
+                }
+                //Valida si es un operador
+                else if (numeroTemporal != "-" && (teclaPulsada.KeyChar == '+' || teclaPulsada.KeyChar == '-' ||
+                    teclaPulsada.KeyChar == '*' || teclaPulsada.KeyChar == '/'))
+                {
+                    //No se, pero funciona, asi que NO QUITAR LA LINEA.
+                    operacionTermianda = false;
+                    //Quizas solo se trata de un numero negativo
+                    if ((teclaPulsada.KeyChar == '-' && numeroTemporal == "") ||
+                        (teclaPulsada.KeyChar == '-' && numeroTemporal == "0"))
+                    {
+                        numeroTemporal = teclaPulsada.KeyChar.ToString();
                         BorrarNumeros(coordNumY);
                         DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
                     }
-                }
-                //Detecta si es un operador o se trata de un numero negativo
-                else if (teclaPulsada.KeyChar == '+' || teclaPulsada.KeyChar == '-' || teclaPulsada.KeyChar == '*' ||
-                        teclaPulsada.KeyChar == '/')
-                {
-                    //Excepciones con el operador '-'
-                    if (teclaPulsada.KeyChar == '-')
-                    {
-                        //Si se trata solo de un numero negativo (Falsa alarma, fak)
-                        if ((numeroTemporal != "" && numeroTemporal[0] != '-' && !char.IsNumber(numeroTemporal[0]) ||
-                                numeroTemporal == "") && operadorAnterior != '+' && operadorAnterior != '-')
-                        {
-                            numeroTemporal += teclaPulsada.KeyChar;
-                            DarFormatoAlNumero(ref numeroTemporal, "Numero");
-                            BorrarNumeros(coordNumY);
-                            DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
-                        }
-                        /* Cambia el signo si se quiere sumar un numero negativo:
-                         *  555 + -2 -> 555 - 2
-                         */
-                        else if (teclaPulsada.KeyChar == '-' && operadorAnterior == '+')
-                        {
-                            operadorAnterior = '-';
-                            historialDeOperaciones = $"{num1} {operadorAnterior}";
-                            BorrarHistorial(coordOpY);
-                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                        }
-                        else if (teclaPulsada.KeyChar == '-' && operadorAnterior == '-')
-                        {
-                            operadorAnterior = '+';
-                            historialDeOperaciones = $"{num1} {operadorAnterior}";
-                            BorrarHistorial(coordOpY);
-                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                        }
-                        //Si se trataba de un operador jaja voy a llorar (codigo duplicado)
-                        else if (!numeroTemporal.Contains("-") || (numeroTemporal.Contains("-") && numeroTemporal[0] == '-' && numeroTemporal.Length > 1))
-                        {
-                            operadorActual = teclaPulsada.KeyChar;
-                            //Si el usuario anteriormente habia tecleado un numero, este se almacena ya sea en n1 o n2.
-                            if (num1 == "" && (numeroTemporal != "" || numeroTemporal == "-"))
-                            {
-                                num1 = numeroTemporal;
-                                n1 = Convert.ToDouble(num1);
-                                DarFormatoAlNumero(ref num1, "Numero");
-                                operadorAnterior = teclaPulsada.KeyChar;
-                                historialDeOperaciones = $"{num1} {operadorAnterior}";
-                            }
-                            else if (num2 == "" && (numeroTemporal != "" || numeroTemporal == "-"))
-                            {
-                                num2 = numeroTemporal;
-                                n2 = Convert.ToDouble(num2);
-                                DarFormatoAlNumero(ref num2, "Numero");
-                            }
-                            //Realiza la operación automaticamente al tener n1, un numero ingresado y anteriormente un operador
-                            if (num1 != "" && num2 != "" && numeroTemporal != "")
-                            {
-                                res = RealizarOperacion(n1, n2, operadorAnterior);
-                                resultado = res.ToString();
-                                num1 = resultado;
-                                n1 = Convert.ToDouble(num1);
-                                DarFormatoAlNumero(ref resultado, "Resultado");
-                                historialDeOperaciones = $"{resultado} {operadorActual}";
-                                BorrarHistorial(coordOpY);
-                                BorrarNumeros(coordNumY);
-                                DibujarNumeros(resultado, coordNumX, coordNumY);
-                                num2 = "";
-                                n2 = 0;
-                                operadorAnterior = teclaPulsada.KeyChar;
-                            }
-                            BorrarHistorial(coordOpY);
-                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                            numeroTemporal = "";
-                        }
-                    }
-                    /* Cambia el signo si se quiere restar un numero negativo:
-                         *  555 + -2 -> 555 - 2
-                    */
-                    else if (teclaPulsada.KeyChar == '+' && operadorAnterior == '-')
-                    {
-                        operadorAnterior = '+';
-                        historialDeOperaciones = $"{num1} {operadorAnterior}";
-                        BorrarHistorial(coordOpY);
-                        DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                    }
-                    /*Guarda los numeros tecleados, almacena el operador y espera otro numero,y 
-                     * en ocaciones tambien resuelve traka*/
+                    //Pues si es un operador 
                     else
                     {
-                        //Evita operadores al inicio y operadores duplicados (la neta no me acuerdo, pero según yo es eso)
-                        if (numeroTemporal != "" && numeroTemporal.Length == 1 && numeroTemporal[0] == '-') continue;
-                        operadorActual = teclaPulsada.KeyChar;
-                        //Si el usuario anteriormente habia tecleado un numero, este se almacena ya sea en n1 o n2.
-                        if (num1 == "" && (numeroTemporal != "" || numeroTemporal == "-"))
+                        //Almacena el numero verificando si se trata del n1 o del n2
+                        if (num1 == "" && numeroTemporal != "" && numeroTemporal != "-")
                         {
                             num1 = numeroTemporal;
                             n1 = Convert.ToDouble(num1);
-                            DarFormatoAlNumero(ref num1, "Numero");
                             operadorAnterior = teclaPulsada.KeyChar;
                             historialDeOperaciones = $"{num1} {operadorAnterior}";
                         }
-                        else if (num2 == "" && (numeroTemporal != "" || numeroTemporal == "-"))
+                        else if (num2 == "" && numeroTemporal != "" && numeroTemporal != "-")
                         {
                             num2 = numeroTemporal;
                             n2 = Convert.ToDouble(num2);
-                            DarFormatoAlNumero(ref num2, "Numero");
                         }
-                        //Realiza la operación automaticamente al tener n1, un numero ingresado y anteriormente un operador
-                        if (num1 != "" && num2 != "" && numeroTemporal != "")
+                        //Comprueba si ya hay dos numeros para asi ya proceder con la operacion
+                        if (num1 != "" && num2 != "")
                         {
-                            if (numeroTemporal == "0" && operadorAnterior == '/')
+                            if (operadorAnterior == '/' && numeroTemporal == "0")
                             {
-                                historialDeOperaciones = $"{num1} {operadorAnterior} {0} =";
+                                historialDeOperaciones = $"{num1} / {numeroTemporal} =";
                                 BorrarHistorial(coordOpY);
-                                BorrarNumeros(coordNumY);
+                                DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
                                 DibujarNumeros("ERROR", coordNumX, coordNumY);
-                                num1 = "";
-                                n1 = 0;
-                                num2 = "";
-                                n2 = 0;
-                                operadorAnterior = teclaPulsada.KeyChar;
-                                Thread.Sleep(500);
-                                numeroTemporal = "";
-                                historialDeOperaciones = "";
-                                operadorAnterior = '\0';
-                                Console.Clear();
-                                MostarBordes();
+                                Thread.Sleep(1000);
+                                ReiniciarTodo(ref numeroTemporal, ref num1, ref num2, ref n1, ref n2, ref operadorAnterior,
+                                    ref historialDeOperaciones, ref operacionTermianda, coordOpY, coordNumX, coordNumY);
                             }
                             else
                             {
                                 res = RealizarOperacion(n1, n2, operadorAnterior);
                                 resultado = res.ToString();
-                                num1 = resultado;
-                                n1 = Convert.ToDouble(num1);
                                 DarFormatoAlNumero(ref resultado, "Resultado");
-                                historialDeOperaciones = $"{resultado} {operadorActual}";
-                                BorrarHistorial(coordOpY);
-                                BorrarNumeros(coordNumY);
+                                historialDeOperaciones = $"{resultado} {teclaPulsada.KeyChar}";
                                 DibujarNumeros(resultado, coordNumX, coordNumY);
+                                num1 = resultado;
+                                n1 = res;
                                 num2 = "";
                                 n2 = 0;
                                 operadorAnterior = teclaPulsada.KeyChar;
@@ -209,66 +121,76 @@ namespace Proyecto1
                         numeroTemporal = "";
                     }
                 }
-                //Detecta si se dió enter y se realiza la operacion
-                else if (teclaPulsada.Key == ConsoleKey.Enter)
+                //Hace la operacion directamente
+                else if (teclaPulsada.Key == ConsoleKey.Enter && (num1 != "" && numeroTemporal != "-" && numeroTemporal != "") && operacionTermianda == false)
                 {
-                    if (num1 != "" && numeroTemporal != "")
+                    BorrarHistorial(coordOpY);
+                    BorrarNumeros(coordNumY);
+                    historialDeOperaciones = $"{num1} {operadorAnterior} {numeroTemporal} =";
+                    DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
+                    //No se puede dividir entre 0
+                    if (operadorAnterior == '/' && numeroTemporal == "0")
                     {
-                        if (numeroTemporal == "0" && operadorAnterior == '/')
-                        {
-                            historialDeOperaciones = $"{num1} {operadorAnterior} {0} =";
-                            BorrarHistorial(coordOpY);
-                            BorrarNumeros(coordNumY);
-                            DibujarNumeros("ERROR", coordNumX, coordNumY);
-                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                            num1 = "";
-                            n1 = 0;
-                            num2 = "";
-                            n2 = 0;
-                            operadorAnterior = teclaPulsada.KeyChar;
-                            Thread.Sleep(500);
-                            numeroTemporal = "";
-                            historialDeOperaciones = "";
-                            operadorAnterior = '\0';
-                            Console.Clear();
-                            MostarBordes();
-                        }
-                        else
-                        {
-                            num2 = numeroTemporal;
-                            n2 = Convert.ToDouble(num2);
-                            DarFormatoAlNumero(ref num2, "Numero");
-                            res = RealizarOperacion(n1, n2, operadorAnterior);
-                            resultado = res.ToString();
-                            historialDeOperaciones = $"{num1} {operadorAnterior} {num2} =";
-                            DarFormatoAlNumero(ref resultado, "Resultado");
-                            BorrarHistorial(coordOpY);
-                            BorrarNumeros(coordNumY);
-                            DibujarNumeros(resultado, coordNumX, coordNumY);
-                            num2 = "";
-                            n2 = 0;
-                            operadorAnterior = teclaPulsada.KeyChar;
-                            DibujarHistorial(historialDeOperaciones, coordOpX, coordOpY);
-                            numeroTemporal = res.ToString();
-                            num1 = "";
-                            n1 = 0;
-                        }
+                        DibujarNumeros("ERROR", coordNumX, coordNumY);
+                        Thread.Sleep(1000);
+                        ReiniciarTodo(ref numeroTemporal, ref num1, ref num2, ref n1, ref n2, ref operadorAnterior,
+                            ref historialDeOperaciones, ref operacionTermianda, coordOpY, coordNumX, coordNumY);
                     }
+                    else
+                    {
+                        res = RealizarOperacion(n1, Convert.ToDouble(numeroTemporal), operadorAnterior);
+                        resultado = res.ToString();
+                        DarFormatoAlNumero(ref resultado, "Resultado");
+                        DibujarNumeros(resultado, coordNumX, coordNumY);
+                        /*num1 = resultado;
+                        n1 = res;*/
+                        num1 = "";
+                        n1 = 0;
+                        num2 = "";
+                        n2 = 0;
+                    }
+                    numeroTemporal = resultado;
+                    operacionTermianda = true;
                 }
                 //Detecta si quiere borrar un numero
                 else if (teclaPulsada.Key == ConsoleKey.Backspace && numeroTemporal != "")
                 {
-                    numeroTemporal = numeroTemporal.Substring(0, numeroTemporal.Length - 1);
-                    if (numeroTemporal.EndsWith(",")) numeroTemporal = numeroTemporal.Substring(0, numeroTemporal.Length - 1);
-                    BorrarNumeros(coordNumY);
-                    DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
+                    if (operacionTermianda)
+                    {
+                        ReiniciarTodo(ref numeroTemporal, ref num1, ref num2, ref n1, ref n2, ref operadorAnterior,
+                             ref historialDeOperaciones, ref operacionTermianda, coordOpY, coordNumX, coordNumY);
+                    }
+                    else
+                    {
+                        numeroTemporal = numeroTemporal.Substring(0, numeroTemporal.Length - 1);
+                        if (numeroTemporal.EndsWith(",")) numeroTemporal = numeroTemporal.Substring(0, numeroTemporal.Length - 1);
+                        BorrarNumeros(coordNumY);
+                        if (numeroTemporal == "")
+                        {
+                            numeroTemporal = "0";
+                        }
+                        DibujarNumeros(numeroTemporal, coordNumX, coordNumY);
+                    }
                 }
-                else if (teclaPulsada.Key == ConsoleKey.C && numeroTemporal != "")
+                else if (teclaPulsada.Key == ConsoleKey.C)
                 {
-                    numeroTemporal = "";
-                    BorrarNumeros(coordNumY);
+                    ReiniciarTodo(ref numeroTemporal, ref num1, ref num2, ref n1, ref n2, ref operadorAnterior,
+                             ref historialDeOperaciones, ref operacionTermianda, coordOpY, coordNumX, coordNumY);
                 }
             }
+        }
+        public static void ReiniciarTodo(ref string numTemporal, ref string num1, ref string num2,
+            ref double n1, ref double n2, ref char operadorAnterior, ref string historial, ref bool operacionTerminada, int coordOpY, int coordNumX, int coordNumY)
+        {
+            numTemporal = "0";
+            num1 = ""; num2 = "";
+            n1 = 0; n2 = 0;
+            operadorAnterior = '\0';
+            historial = "";
+            operacionTerminada = false;
+            BorrarHistorial(coordOpY);
+            BorrarNumeros(coordNumY);
+            DibujarNumeros(numTemporal, coordNumX, coordNumY);
         }
         public static void MostarBordes()
         {
@@ -682,7 +604,6 @@ namespace Proyecto1
             Console.Write(borrador);
             Console.SetCursorPosition(1, y + 4);
             Console.Write(borrador);
-
         }
         public static void BorrarHistorial(int y)
         {
